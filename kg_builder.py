@@ -15,11 +15,6 @@ from neo4j import GraphDatabase
 
 from embeddings import get_embeddings, get_single_embedding
 
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
-
 VECTOR_DIMS = 1024  # jina-embeddings-v3 outputs 1024-dim vectors by default
 
 
@@ -28,7 +23,12 @@ VECTOR_DIMS = 1024  # jina-embeddings-v3 outputs 1024-dim vectors by default
 # ──────────────────────────────────────────────
 
 def get_driver():
-    return GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+    uri      = os.getenv("NEO4J_URI")
+    username = os.getenv("NEO4J_USERNAME", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD")
+    if not uri or not password:
+        raise ValueError("NEO4J_URI and NEO4J_PASSWORD must be set in .env")
+    return GraphDatabase.driver(uri, auth=(username, password))
 
 
 # ──────────────────────────────────────────────
@@ -56,8 +56,12 @@ SETUP_QUERIES = [
 ]
 
 
+def _db():
+    return os.getenv("NEO4J_DATABASE", "neo4j")
+
+
 def setup_schema(driver):
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         for q in SETUP_QUERIES:
             try:
                 session.run(q)
@@ -120,7 +124,7 @@ def ingest_rules(csv_path: str, driver=None) -> int:
     RETURN r.rule_id
     """
 
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         for rule, emb in zip(rules, embeddings):
             session.run(merge_query, {
                 "rule_id":     rule["rule_id"],
@@ -141,7 +145,7 @@ def ingest_rules(csv_path: str, driver=None) -> int:
 # ──────────────────────────────────────────────
 
 def get_all_rules(driver) -> list[dict]:
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         result = session.run(
             "MATCH (r:Rule) RETURN r.rule_id AS rule_id, "
             "r.rule_text AS rule_text, r.category AS category, "
@@ -151,7 +155,7 @@ def get_all_rules(driver) -> list[dict]:
 
 
 def get_rule_by_id(rule_id: str, driver) -> Optional[dict]:
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         result = session.run(
             "MATCH (r:Rule {rule_id: $rule_id}) "
             "RETURN r.rule_id AS rule_id, r.rule_text AS rule_text, "
@@ -191,7 +195,7 @@ def find_similar_rules(
     ORDER BY score DESC
     """
 
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         result = session.run(query, {
             "top_k": top_k + (1 if exclude_rule_id else 0),  # fetch extra to compensate for exclusion
             "embedding": query_embedding,
@@ -219,7 +223,7 @@ def save_conflict(rule_id_a: str, rule_id_b: str, explanation: str, score: float
     """
     # Canonical pair key so we don't duplicate in both directions
     pair_key = "-".join(sorted([rule_id_a, rule_id_b]))
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         session.run(query, {
             "id_a": rule_id_a,
             "id_b": rule_id_b,
@@ -240,7 +244,7 @@ def get_all_conflicts(driver) -> list[dict]:
            r.explanation     AS conflict_explanation,
            r.similarity_score AS similarity_score
     """
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         return [dict(rec) for rec in session.run(query)]
 
 
@@ -258,7 +262,7 @@ def get_conflicts_for_rule(rule_id: str, driver) -> list[dict]:
            r.explanation      AS conflict_explanation,
            r.similarity_score AS similarity_score
     """
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         return [dict(rec) for rec in session.run(query, {"rule_id": rule_id})]
 
 
@@ -272,7 +276,7 @@ def add_rule_to_graph(rule: dict, driver):
     ON MATCH  SET r.rule_text=$rule_text, r.category=$category,
                   r.description=$description, r.embedding=$embedding
     """
-    with driver.session(database=NEO4J_DATABASE) as session:
+    with driver.session(database=_db()) as session:
         session.run(merge_query, {
             "rule_id":     rule["rule_id"],
             "rule_text":   rule["rule_text"],

@@ -1,0 +1,11 @@
+rule_id,rule_text,category,description
+R001,Employees must not access customer data without explicit written authorization.,Data Privacy,Controls unauthorized data access
+R002,All customer data may be freely accessed by any employee for business purposes.,Data Access,Open access policy
+R003,Passwords must be changed every 90 days.,Security,Password rotation policy
+R004,Passwords must never be changed once set to ensure system stability.,Security,Static credential policy
+R005,All financial transactions above $10000 must be approved by two managers.,Finance,Dual approval for large transactions
+R006,Managers may approve any financial transaction regardless of amount without secondary review.,Finance,Single approval policy
+R007,Remote work is permitted on Mondays and Fridays only.,HR,Flexible work schedule
+R008,All employees must be present in the office five days a week.,HR,In-office attendance policy
+R009,Software deployments must be tested in a staging environment before production release.,Engineering,Deployment safety
+R010,Urgent hotfixes may be deployed directly to production without staging.,Engineering,Emergency deployment exception

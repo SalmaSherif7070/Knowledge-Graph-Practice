@@ -1,0 +1,9 @@
+python-dotenv
+pydantic>=2.0
+pydantic-settings
+neo4j
+fastapi
+uvicorn[standard]
+requests
+numpy
+httpx

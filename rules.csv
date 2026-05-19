@@ -9,3 +9,23 @@ R007,Remote work is permitted on Mondays and Fridays only.,HR,Flexible work sche
 R008,All employees must be present in the office five days a week.,HR,In-office attendance policy
 R009,Software deployments must be tested in a staging environment before production release.,Engineering,Deployment safety
 R010,Urgent hotfixes may be deployed directly to production without staging.,Engineering,Emergency deployment exception
+R011,All employee communications on company systems are private and may not be monitored.,HR,Employee privacy policy
+R012,The company reserves the right to monitor all communications on company-owned systems.,HR,Monitoring policy
+R013,Vendors must sign a non-disclosure agreement before receiving any project documentation.,Procurement,NDA requirement
+R014,Project documentation may be shared with pre-approved vendors without additional agreements.,Procurement,Streamlined vendor sharing
+R015,All software dependencies must be reviewed and approved by the security team before use.,Engineering,Dependency approval
+R016,Developers may add open-source libraries without prior security review if the library has over 1000 GitHub stars.,Engineering,Trusted open-source exception
+R017,Customer personal data must be deleted within 30 days of account closure.,Data Privacy,Data retention policy
+R018,Customer data must be retained for a minimum of 7 years for audit and compliance purposes.,Data Privacy,Compliance retention
+R019,Employees must report all security incidents within 24 hours of discovery.,Security,Incident reporting
+R020,Minor security incidents below severity level 3 may be resolved without formal reporting.,Security,Incident triage exception
+R021,All code changes must be reviewed and approved by at least two senior engineers before merging.,Engineering,Code review policy
+R022,Hotfix commits may be merged directly to the main branch without peer review in production emergencies.,Engineering,Emergency merge exception
+R023,Travel expenses above $500 must be pre-approved by a department head.,Finance,Travel expense approval
+R024,Employees may book travel up to $2000 without pre-approval if the trip is within the current quarter.,Finance,Travel booking flexibility
+R025,All external API integrations must use OAuth 2.0 for authentication.,Security,API authentication standard
+R026,Internal service-to-service communication may use API keys instead of OAuth.,Security,Internal auth exception
+R027,New employees must complete security awareness training within their first week.,HR,Onboarding security training
+R028,Security training may be deferred up to 90 days for new hires joining during a product launch period.,HR,Training deferral policy
+R029,Database backups must be performed daily and stored in a geographically separate location.,Engineering,Backup policy
+R030,Database backups are performed weekly and stored on the same server for quick restore access.,Engineering,Local backup policy

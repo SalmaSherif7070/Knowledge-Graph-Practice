@@ -1,0 +1,19 @@
+rule_id_a,rule_id_b,is_conflict,conflict_type,notes
+R001,R002,true,direct,Authorization required vs freely accessible — mutually exclusive
+R003,R004,true,direct,Must change vs must never change — direct contradiction
+R005,R006,true,exception_negates,Dual approval required vs single approval allowed for any amount
+R007,R008,true,exception_negates,Remote allowed Mon/Fri vs must be in office 5 days
+R009,R010,true,exception_negates,Staging required vs hotfixes bypass staging
+R011,R012,true,direct,Communications are private vs company may monitor all communications
+R013,R014,true,exception_negates,NDA required vs pre-approved vendors exempt from NDA
+R017,R018,true,direct,Delete within 30 days vs retain for 7 years — impossible to satisfy both
+R019,R020,true,exception_negates,All incidents must be reported vs minor incidents may be resolved silently
+R021,R022,true,exception_negates,All changes need two reviewers vs hotfixes may skip review
+R023,R024,true,exception_negates,Over $500 needs pre-approval vs up to $2000 allowed without pre-approval
+R029,R030,true,direct,Daily offsite backups required vs weekly local backups only
+R015,R016,false,near_miss,Security review required vs trusted libraries exempt — partial overlap but scoped exception
+R025,R026,false,near_miss,OAuth required externally vs API keys allowed internally — different scopes
+R027,R028,false,near_miss,Training within first week vs may defer 90 days during launch — time-bounded exception
+R001,R017,false,unrelated,Both are Data Privacy rules but address different aspects
+R003,R025,false,unrelated,Security rules in different domains — passwords vs API auth
+R005,R023,false,unrelated,Both Finance rules but cover different transaction types

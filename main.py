@@ -102,6 +102,21 @@ def load_rules(
 
     return {"message": f"Successfully loaded {count} rules into the knowledge graph."}
 
+@app.delete("/rules/reset", tags=["rules"], summary="Delete all rules and conflicts from Neo4j")
+def reset_graph():
+    """
+    Removes all Rule nodes and CONFLICTS_WITH relationships from the graph.
+    Useful for a clean re-ingest.
+    """
+    try:
+        driver = get_driver()
+        with driver.session(database=os.getenv("NEO4J_DATABASE", "neo4j")) as session:
+            session.run("MATCH (r:Rule) DETACH DELETE r")
+        driver.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "All Rule nodes and CONFLICTS_WITH relationships deleted."}
 
 # ──────────────────────────────────────────────
 # List all rules

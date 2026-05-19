@@ -3,21 +3,15 @@ import json
 import requests
 from typing import Optional
 
-# Support multiple Gemini API keys — if the first is exhausted, fall back to the next.
-# Set them in .env as GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, etc.
-
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL    = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 def _get_api_keys() -> list[str]:
-    """Collect all GEMINI_API_KEY* variables from environment, in order."""
     keys = []
-    # Primary key
     primary = os.getenv("GEMINI_API_KEY")
     if primary:
         keys.append(primary)
-    # Additional keys: GEMINI_API_KEY_2, GEMINI_API_KEY_3, ...
     i = 2
     while True:
         key = os.getenv(f"GEMINI_API_KEY_{i}")
@@ -29,38 +23,18 @@ def _get_api_keys() -> list[str]:
 
 
 def call_gemini(prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.0) -> str:
-    """
-    Call Gemini generateContent API.
-    Automatically falls back to the next API key on quota/rate-limit errors (429).
-    """
     keys = _get_api_keys()
     if not keys:
         raise ValueError("No GEMINI_API_KEY found in environment.")
 
     url_template = f"{GEMINI_BASE_URL}/{GEMINI_MODEL}:generateContent?key={{key}}"
 
-    contents = []
-    if system_prompt:
-        # Gemini uses system_instruction at the top level
-        pass  # handled below
-
-    contents.append({
-        "role": "user",
-        "parts": [{"text": prompt}]
-    })
-
     body: dict = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": temperature,
-            "maxOutputTokens": 2048,
-        }
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": temperature, "maxOutputTokens": 2048},
     }
-
     if system_prompt:
-        body["system_instruction"] = {
-            "parts": [{"text": system_prompt}]
-        }
+        body["system_instruction"] = {"parts": [{"text": system_prompt}]}
 
     last_error: Optional[Exception] = None
 
@@ -74,32 +48,35 @@ def call_gemini(prompt: str, system_prompt: Optional[str] = None, temperature: f
             )
             if resp.status_code == 429:
                 last_error = Exception(f"Quota exceeded for key ending ...{key[-4:]}")
-                continue  # try next key
-
+                continue
             resp.raise_for_status()
             data = resp.json()
-            # Extract text from response
             return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-
         except requests.HTTPError as e:
             if resp.status_code == 429:
                 last_error = e
                 continue
             raise
 
-    raise RuntimeError(
-        f"All Gemini API keys exhausted or failed. Last error: {last_error}"
-    )
+    raise RuntimeError(f"All Gemini API keys exhausted or failed. Last error: {last_error}")
 
 
 # ──────────────────────────────────────────────
 # Conflict-specific prompt helpers
 # ──────────────────────────────────────────────
 
-CONFLICT_SYSTEM_PROMPT = """You are a rule compliance expert.
-Your job is to determine whether two rules directly conflict with each other.
-Rules conflict when they cannot both be satisfied simultaneously, 
-or when following one necessarily violates the other.
+CONFLICT_SYSTEM_PROMPT = """You are a strict rule conflict analyst.
+Your job is to identify when two rules are in conflict.
+
+Rules ARE in conflict if ANY of the following apply:
+1. They cannot both be satisfied simultaneously.
+2. Following one necessarily violates the other.
+3. One rule creates an exception that directly undermines or negates the other rule's requirement.
+4. They impose contradictory obligations on the same subject (e.g. must do X vs must not do X, or must do X vs may skip X).
+
+Do NOT dismiss a conflict just because one rule frames itself as an "exception" or "emergency" provision.
+If Rule B allows bypassing a requirement imposed by Rule A, that IS a conflict.
+
 Respond ONLY in valid JSON."""
 
 CONFLICT_PROMPT_TEMPLATE = """Analyze whether these two rules conflict:
@@ -109,6 +86,8 @@ Rule A (ID: {id_a}):
 
 Rule B (ID: {id_b}):
 {text_b}
+
+A conflict exists if one rule imposes a requirement that the other rule contradicts, bypasses, or negates — even partially or in specific circumstances.
 
 Respond with a JSON object:
 {{
@@ -120,22 +99,18 @@ Respond with a JSON object:
 def check_conflict_with_llm(
     id_a: str, text_a: str, id_b: str, text_b: str
 ) -> tuple[bool, str]:
-    """
-    Returns (conflicts: bool, explanation: str).
-    """
+    """Returns (conflicts: bool, explanation: str)."""
     prompt = CONFLICT_PROMPT_TEMPLATE.format(
         id_a=id_a, text_a=text_a, id_b=id_b, text_b=text_b
     )
     raw = call_gemini(prompt, system_prompt=CONFLICT_SYSTEM_PROMPT)
 
-    # Strip markdown code fences (handles ```json, ```, etc.)
     clean = raw.strip()
     for fence in ("```json", "```"):
         if clean.startswith(fence):
             clean = clean[len(fence):]
     clean = clean.removesuffix("```").strip()
 
-    # Extract the first complete JSON object (handles trailing text / truncation)
     brace_start = clean.find("{")
     brace_end   = clean.rfind("}")
     if brace_start != -1 and brace_end != -1 and brace_end > brace_start:
@@ -145,7 +120,6 @@ def check_conflict_with_llm(
         result = json.loads(clean)
         return bool(result.get("conflicts", False)), result.get("explanation", "")
     except json.JSONDecodeError:
-        # Truncated / malformed — derive verdict from keywords
         lower = raw.lower()
         conflicts = '"conflicts": true' in lower or (
             "conflict" in lower and '"conflicts": false' not in lower

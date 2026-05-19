@@ -1,7 +1,6 @@
 # Existing project deps
 python-dotenv
 neo4j
-openai
 
 # Agent deps
 fastapi
@@ -9,3 +8,4 @@ uvicorn[standard]
 requests
 numpy
 pydantic>=2.0
+httpx 

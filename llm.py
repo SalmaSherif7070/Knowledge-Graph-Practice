@@ -53,7 +53,7 @@ def call_gemini(prompt: str, system_prompt: Optional[str] = None, temperature: f
         "contents": contents,
         "generationConfig": {
             "temperature": temperature,
-            "maxOutputTokens": 1024,
+            "maxOutputTokens": 2048,
         }
     }
 
@@ -128,14 +128,26 @@ def check_conflict_with_llm(
     )
     raw = call_gemini(prompt, system_prompt=CONFLICT_SYSTEM_PROMPT)
 
-    # Strip markdown code fences if present
-    clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    # Strip markdown code fences (handles ```json, ```, etc.)
+    clean = raw.strip()
+    for fence in ("```json", "```"):
+        if clean.startswith(fence):
+            clean = clean[len(fence):]
+    clean = clean.removesuffix("```").strip()
+
+    # Extract the first complete JSON object (handles trailing text / truncation)
+    brace_start = clean.find("{")
+    brace_end   = clean.rfind("}")
+    if brace_start != -1 and brace_end != -1 and brace_end > brace_start:
+        clean = clean[brace_start : brace_end + 1]
 
     try:
         result = json.loads(clean)
         return bool(result.get("conflicts", False)), result.get("explanation", "")
     except json.JSONDecodeError:
-        # Fallback: look for keywords
+        # Truncated / malformed — derive verdict from keywords
         lower = raw.lower()
-        conflicts = "true" in lower or "conflict" in lower
+        conflicts = '"conflicts": true' in lower or (
+            "conflict" in lower and '"conflicts": false' not in lower
+        )
         return conflicts, raw

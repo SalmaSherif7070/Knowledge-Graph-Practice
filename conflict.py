@@ -24,7 +24,7 @@ from models import ConflictPair, CheckAllConflictsResponse, NewRuleConflictRespo
 # Similarity threshold — pairs above this are sent to the LLM for conflict checking.
 # Lower = more pairs checked (slower, more thorough).
 # Higher = fewer pairs checked (faster, may miss subtle conflicts).
-SIMILARITY_THRESHOLD = float(__import__("os").getenv("SIMILARITY_THRESHOLD", "0.60"))
+SIMILARITY_THRESHOLD = float(__import__("os").getenv("SIMILARITY_THRESHOLD", "0.45"))
 
 # How many similar candidates to retrieve per rule when checking a new rule
 TOP_K_CANDIDATES = int(__import__("os").getenv("TOP_K_CANDIDATES", "20"))
